@@ -37,7 +37,14 @@ class ProfileViewModel @Inject constructor() : ViewModel() {
             }
     }
 
-    fun updateProfile(newName: String, newBio: String, newRole: String, newImageUri: Uri?, context: Context, onSuccess: () -> Unit) {
+    fun updateProfile(
+        newName: String,
+        newBio: String,
+        newRole: String,
+        newImageUri: Uri?,
+        context: Context,
+        onSuccess: () -> Unit
+    ) {
         val userId = auth.currentUser?.uid ?: return
 
         viewModelScope.launch {
@@ -50,8 +57,7 @@ class ProfileViewModel @Inject constructor() : ViewModel() {
                 "imageUrl" to uploadedUrl
             )
 
-            db.collection("users")
-                .document(userId)
+            db.collection("users").document(userId)
                 .set(profileData)
                 .addOnSuccessListener {
                     name.value = newName

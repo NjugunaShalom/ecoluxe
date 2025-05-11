@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwapListScreen(navController: NavController) {
+fun SwapListScreen(navController: NavController,showOnlyMyUploads: Boolean = false) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val userId = auth.currentUser?.uid ?: ""
@@ -67,8 +67,15 @@ fun SwapListScreen(navController: NavController) {
 
     // Fetch swap items
     LaunchedEffect(selectedFilter) {
-        val baseQuery = db.collection("swap_items")
-            .whereEqualTo("status", "Available")
+        val baseQuery = if (showOnlyMyUploads) {
+            db.collection("swap_items")
+                .whereEqualTo("status", "Available")
+                .whereEqualTo("uploaderId", userId)
+        } else {
+            db.collection("swap_items")
+                .whereEqualTo("status", "Available")
+        }
+
 
         val query = when (selectedFilter) {
             "My Uploads" -> baseQuery.whereEqualTo("uploaderId", userId)
@@ -110,16 +117,16 @@ fun SwapListScreen(navController: NavController) {
             TopAppBar(
                 title = {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ecoluxe_logo),
-                            contentDescription = "EcoLuxe Logo",
-                            modifier = Modifier.size(32.dp).clip(CircleShape)
-                        )
-                        Text("EcoLuxe Swap", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.ecoluxe_logo),
+                        contentDescription = "EcoLuxe Logo",
+                        modifier = Modifier.size(32.dp).clip(CircleShape)
+                    )
+                    Text("EcoLuxe Swap", color = Color.White, fontWeight = FontWeight.Bold)
+                }
                 },
                 actions = {
                     Box {
