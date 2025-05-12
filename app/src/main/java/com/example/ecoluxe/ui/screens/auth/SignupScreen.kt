@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.ecoluxe.R
-import com.example.ecoluxe.navigation.ROUTE_PROFILE
+import com.example.ecoluxe.navigation.ROUTE_HOME
 import com.example.ecoluxe.viewmodel.AuthViewModel
 
 @Composable
@@ -94,7 +94,7 @@ fun SignupScreen(navController: NavController, viewModel: AuthViewModel = hiltVi
                     } else {
                         viewModel.signup(email.trim(), password.trim()) { success ->
                             if (success) {
-                                navController.navigate(ROUTE_PROFILE)
+                                navController.navigate(ROUTE_HOME)
                             } else {
                                 Toast.makeText(context, "Sign up failed", Toast.LENGTH_SHORT).show()
                             }

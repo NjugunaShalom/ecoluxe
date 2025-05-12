@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ecoluxe.data.model.UserProfile
 import com.example.ecoluxe.data.network.uploadImageToImgur
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -28,12 +29,15 @@ class ProfileViewModel @Inject constructor() : ViewModel() {
         val userId = auth.currentUser?.uid ?: return
         db.collection("users").document(userId).get()
             .addOnSuccessListener { doc ->
-                doc?.let {
-                    name.value = it.getString("name") ?: ""
-                    bio.value = it.getString("bio") ?: ""
-                    role.value = it.getString("role") ?: ""
-                    imageUrl.value = it.getString("imageUrl") ?: ""
+                doc?.toObject(UserProfile::class.java)?.let { profile ->
+                    name.value = profile.name
+                    bio.value = profile.bio
+                    role.value = profile.role
+                    imageUrl.value = profile.imageUrl
                 }
+            }
+            .addOnFailureListener {
+                // Optional: log error
             }
     }
 
@@ -48,17 +52,27 @@ class ProfileViewModel @Inject constructor() : ViewModel() {
         val userId = auth.currentUser?.uid ?: return
 
         viewModelScope.launch {
-            val uploadedUrl = newImageUri?.let { uploadImageToImgur(context, it) } ?: imageUrl.value
+            val uploadedUrl = if (newImageUri == null) {
+                imageUrl.value
+            } else {
+                val result = uploadImageToImgur(context, newImageUri)
+                if (result.isNullOrBlank()) {
+                    Toast.makeText(context, "Image upload failed", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                result
+            }
 
-            val profileData = hashMapOf(
-                "name" to newName,
-                "bio" to newBio,
-                "role" to newRole,
-                "imageUrl" to uploadedUrl
+
+            val updatedProfile = UserProfile(
+                name = newName,
+                bio = newBio,
+                role = newRole,
+                imageUrl = uploadedUrl
             )
 
             db.collection("users").document(userId)
-                .set(profileData)
+                .set(updatedProfile)
                 .addOnSuccessListener {
                     name.value = newName
                     bio.value = newBio

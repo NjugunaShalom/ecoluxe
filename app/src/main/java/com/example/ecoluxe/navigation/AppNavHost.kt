@@ -12,6 +12,7 @@ import com.example.ecoluxe.ui.screens.auth.SignupScreen
 import com.example.ecoluxe.ui.screens.auth.WelcomeScreen
 import com.example.ecoluxe.ui.screens.chat.ChatListScreen
 import com.example.ecoluxe.ui.screens.chat.ChatScreen
+import com.example.ecoluxe.ui.screens.event.EventsScreen
 import com.example.ecoluxe.ui.screens.home.HomeScreen
 import com.example.ecoluxe.ui.screens.profile.ProfileScreen
 import com.example.ecoluxe.ui.screens.swap.SwapListScreen
@@ -37,6 +38,7 @@ fun EcoLuxeApp(navController:NavHostController = rememberNavController(),startDe
             ChatScreen(navController, chatId)
         }
         composable(ROUTE_CHATLIST) { ChatListScreen(navController) }
+        composable(ROUTE_EVENTS){ EventsScreen(navController) }
     }
 
 }

@@ -369,11 +369,9 @@ fun ProfileScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceEvenly
                                     ) {
-                                        // My Items Button with enhanced design
                                         Button(
                                             onClick = {
                                                 coroutineScope.launch {
-                                                    // Add click animation
                                                     val clickAnim = Animatable(1f)
                                                     clickAnim.animateTo(0.9f, animationSpec = tween(100))
                                                     clickAnim.animateTo(1f, animationSpec = spring())
@@ -433,6 +431,7 @@ fun ProfileScreen(
                             imageUrl = viewModel.imageUrl.value,
                             onSave = { name, bio, role, uri ->
                                 viewModel.updateProfile(name, bio, role, uri, context) {
+                                    viewModel.loadProfile()
                                     showEditPopup.value = false
                                 }
                             },
