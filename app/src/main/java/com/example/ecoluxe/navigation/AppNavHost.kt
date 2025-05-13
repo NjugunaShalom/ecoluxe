@@ -12,6 +12,7 @@ import com.example.ecoluxe.ui.screens.auth.SignupScreen
 import com.example.ecoluxe.ui.screens.auth.WelcomeScreen
 import com.example.ecoluxe.ui.screens.chat.ChatListScreen
 import com.example.ecoluxe.ui.screens.chat.ChatScreen
+import com.example.ecoluxe.ui.screens.ecotracker.EcoTrackerScreen
 import com.example.ecoluxe.ui.screens.event.EventsScreen
 import com.example.ecoluxe.ui.screens.home.HomeScreen
 import com.example.ecoluxe.ui.screens.profile.ProfileScreen
@@ -28,17 +29,18 @@ fun EcoLuxeApp(navController:NavHostController = rememberNavController(),startDe
         composable(ROUTE_LOGIN) { LoginScreen(navController) }
         composable(ROUTE_HOME) { HomeScreen(navController) }
         composable (ROUTE_SWAPLIST){ SwapListScreen(navController) }
-//      composable (ROUTE_UPLOADSWAPITEM){ UploadSwapItemScreen(navController) }
         composable (ROUTE_PROFILE){ ProfileScreen(navController) }
         composable(
             route = ROUTE_CHAT_WITH_ID,
             arguments = listOf(navArgument("chatId") { defaultValue = "" })
         ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
-            ChatScreen(navController, chatId)
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            ChatScreen(navController = navController, chatId = chatId)
         }
+
         composable(ROUTE_CHATLIST) { ChatListScreen(navController) }
         composable(ROUTE_EVENTS){ EventsScreen(navController) }
+        composable (ROUTE_ECOTRACKER){ EcoTrackerScreen(navController) }
     }
 
 }

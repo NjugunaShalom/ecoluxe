@@ -1,6 +1,7 @@
 package com.example.ecoluxe.viewmodel
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -98,6 +99,30 @@ class EventViewModel : ViewModel() {
             }
             .addOnFailureListener {
                 Toast.makeText(context, "Something went wrong", Toast.LENGTH_SHORT).show()
+            }
+    }
+    fun deleteEvent(eventId: String, onSuccess: () -> Unit) {
+        db.collection("events").document(eventId)
+            .delete()
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener {
+                Log.e("EventViewModel", "Failed to delete event", it)
+            }
+    }
+
+    fun updateEvent(eventId: String, title: String, desc: String, date: String, imageUrl: String, onSuccess: () -> Unit) {
+        val update = mapOf(
+            "title" to title,
+            "description" to desc,
+            "date" to date,
+            "imageUrl" to imageUrl
+        )
+
+        db.collection("events").document(eventId)
+            .update(update)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener {
+                Log.e("EventViewModel", "Failed to update event", it)
             }
     }
 

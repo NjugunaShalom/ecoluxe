@@ -2,8 +2,10 @@ package com.example.ecoluxe.ui.screens.swap
 
 import android.net.Uri
 import android.widget.Toast
+import com.example.ecoluxe.utils.generateChatId
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,10 +14,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,30 +29,111 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.ecoluxe.R
 import com.example.ecoluxe.data.model.SwapItem
 import com.example.ecoluxe.viewmodel.SwapViewModel
-import kotlinx.coroutines.launch
+import com.google.firebase.auth.FirebaseAuth
+
+// Define colors
+private val LavenderPurple = Color(0xFFB57EDC)
+private val White = Color(0xFFFFFFFF)
+private val LightBackground = Color(0xFFF8F6FF)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwapListScreen(navController: NavController,viewModel: SwapViewModel = hiltViewModel()) {
+fun SwapListScreen(navController: NavController, viewModel: SwapViewModel = hiltViewModel()) {
     val items by viewModel.swapItems.collectAsState()
     val showUploadDialog = remember { mutableStateOf(false) }
     val showDetailPopup = remember { mutableStateOf(false) }
     val selectedItem = remember { mutableStateOf<SwapItem?>(null) }
     val context = LocalContext.current
+    val selectedColor = remember { mutableStateOf("All") }
+    val selectedSize = remember { mutableStateOf("All") }
+    val menuExpanded = remember { mutableStateOf(false) }
+
+
+    LaunchedEffect(Unit) {
+        viewModel.loadItems()
+    }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ecoluxe_logo),
+                            contentDescription = "EcoLuxe Logo",
+                            modifier = Modifier.size(32.dp).clip(CircleShape)
+                        )
+                        Text(
+                            text = "Swap",
+                            color = White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = White
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = LavenderPurple
+                ),
+                actions = {
+
+                    IconButton(onClick = { menuExpanded.value = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Filter", tint = Color.White)
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded.value,
+                        onDismissRequest = { menuExpanded.value = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Color: ${selectedColor.value}") },
+                            onClick = {
+                                selectedColor.value = if (selectedColor.value == "All") "Purple" else "All"
+                                viewModel.loadItemsFiltered(selectedColor.value, selectedSize.value)
+                                menuExpanded.value = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Size: ${selectedSize.value}") },
+                            onClick = {
+                                selectedSize.value = if (selectedSize.value == "All") "M" else "All"
+                                viewModel.loadItemsFiltered(selectedColor.value, selectedSize.value)
+                                menuExpanded.value = false
+                            }
+                        )
+                    }
+
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showUploadDialog.value = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
             }
         },
-        containerColor = Color(0xFFF8F6FF)
+        containerColor = LightBackground
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             LazyVerticalGrid(
@@ -67,7 +152,18 @@ fun SwapListScreen(navController: NavController,viewModel: SwapViewModel = hiltV
                         onDelete = { viewModel.deleteItem(item.id) },
                         onMarkSwapped = { viewModel.markAsSwapped(item.id) },
                         onChat = {
-                            Toast.makeText(context, "Chat with ${item.uploaderName}", Toast.LENGTH_SHORT).show()
+                            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+                            val uploaderId = item.uploader
+
+                            if (currentUserId == uploaderId) {
+                                Toast.makeText(context, "You can't chat with yourself!", Toast.LENGTH_SHORT).show()
+                                return@SwapItemCard
+                            }
+
+                            if (currentUserId != null) {
+                                val chatId = generateChatId(currentUserId, uploaderId)
+                                navController.navigate("chat/$chatId")
+                            }
                         },
                         onTap = {
                             selectedItem.value = item
@@ -88,19 +184,22 @@ fun SwapListScreen(navController: NavController,viewModel: SwapViewModel = hiltV
                     viewModel = viewModel
                 )
             }
+
             if (showDetailPopup.value && selectedItem.value != null) {
                 SwapItemDetailPopup(
                     item = selectedItem.value!!,
                     onDismiss = { showDetailPopup.value = false },
                     onChat = {
                         Toast.makeText(context, "Chat with ${selectedItem.value!!.uploaderName}", Toast.LENGTH_SHORT).show()
-                    }
+                    },
+                    navController = navController
                 )
             }
 
         }
     }
 }
+
 @Composable
 fun UploadSwapItemPopup(
     onDismiss: () -> Unit,
@@ -108,7 +207,6 @@ fun UploadSwapItemPopup(
     viewModel: SwapViewModel
 ) {
     val context = LocalContext.current
-    val purple = Color(0xFFB57EDC)
     val name = remember { mutableStateOf("") }
     val size = remember { mutableStateOf("") }
     val color = remember { mutableStateOf("") }
@@ -122,7 +220,7 @@ fun UploadSwapItemPopup(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        containerColor = Color.White,
+        containerColor = White,
         shape = RoundedCornerShape(20.dp),
         text = {
             Column(
@@ -133,7 +231,7 @@ fun UploadSwapItemPopup(
                     .heightIn(max = 500.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Text("Add Swap Item", style = MaterialTheme.typography.titleMedium.copy(color = purple))
+                Text("Add Swap Item", style = MaterialTheme.typography.titleMedium.copy(color = LavenderPurple))
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -143,8 +241,8 @@ fun UploadSwapItemPopup(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Button(onClick = { imagePicker.launch("image/*") }, colors = ButtonDefaults.buttonColors(containerColor = purple)) {
-                    Text("Select Images", color = Color.White)
+                Button(onClick = { imagePicker.launch("image/*") }, colors = ButtonDefaults.buttonColors(containerColor = LavenderPurple)) {
+                    Text("Select Images", color = White)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -166,6 +264,14 @@ fun UploadSwapItemPopup(
 
                 Button(
                     onClick = {
+                        println("Upload clicked") // ✅ Confirm click
+                        Toast.makeText(context, "Uploading item...", Toast.LENGTH_SHORT).show()
+
+                        if (name.value.isBlank() || size.value.isBlank() || color.value.isBlank() || imageUris.isEmpty()) {
+                            Toast.makeText(context, "Please fill all fields & pick image", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
                         viewModel.uploadItem(
                             name = name.value,
                             size = size.value,
@@ -173,6 +279,7 @@ fun UploadSwapItemPopup(
                             images = imageUris,
                             context = context,
                             onSuccess = {
+                                Toast.makeText(context, "Upload success!", Toast.LENGTH_SHORT).show()
                                 name.value = ""
                                 size.value = ""
                                 color.value = ""
@@ -181,11 +288,12 @@ fun UploadSwapItemPopup(
                             }
                         )
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = purple),
+                    colors = ButtonDefaults.buttonColors(containerColor = LavenderPurple),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Upload", color = Color.White)
+                    Text("Upload", color = White)
                 }
+
 
                 TextButton(onClick = onDismiss) {
                     Text("Cancel")
@@ -199,13 +307,15 @@ fun UploadSwapItemPopup(
 fun SwapItemDetailPopup(
     item: SwapItem,
     onDismiss: () -> Unit,
-    onChat: () -> Unit
+    onChat: () -> Unit,
+    navController: NavController
 ) {
-    val purple = Color(0xFFB57EDC)
+    val context = LocalContext.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        containerColor = Color.White,
+        containerColor = White,
         shape = RoundedCornerShape(20.dp),
         text = {
             Column(
@@ -253,11 +363,24 @@ fun SwapItemDetailPopup(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = onChat,
+                    onClick = {
+                        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+                        val uploaderId = item.uploader
+
+                        if (currentUserId == uploaderId) {
+                            Toast.makeText(context, "You can't chat with yourself!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        if (currentUserId != null) {
+                            val chatId = generateChatId(currentUserId, uploaderId)
+                            navController.navigate("chat/$chatId")
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = purple)
+                    colors = ButtonDefaults.buttonColors(containerColor = LavenderPurple)
                 ) {
-                    Text("Chat with Uploader", color = Color.White)
+                    Text("Chat with Uploader", color = White)
                 }
 
                 TextButton(onClick = onDismiss) {
@@ -267,7 +390,6 @@ fun SwapItemDetailPopup(
         }
     )
 }
-
 @Composable
 fun SwapItemCard(
     item: SwapItem,
@@ -307,9 +429,9 @@ fun SwapItemCard(
                     if (isMine) {
                         Text(
                             text = "Mine",
-                            color = Color.White,
+                            color = White,
                             modifier = Modifier
-                                .background(Color(0xFFB57EDC), RoundedCornerShape(6.dp))
+                                .background(LavenderPurple, RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -317,7 +439,7 @@ fun SwapItemCard(
                     }
 
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.White)
+                        Icon(Icons.Default.MoreVert, contentDescription = null, tint = White)
                     }
 
                     DropdownMenu(
@@ -363,4 +485,3 @@ fun SwapItemCard(
         }
     }
 }
-

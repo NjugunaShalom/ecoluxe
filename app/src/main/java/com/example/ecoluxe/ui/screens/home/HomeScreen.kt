@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.ecoluxe.R
+import com.example.ecoluxe.navigation.ROUTE_ECOTRACKER
+import com.example.ecoluxe.navigation.ROUTE_EVENTS
 import com.example.ecoluxe.navigation.ROUTE_PROFILE
 import com.example.ecoluxe.navigation.ROUTE_SWAPLIST
 
@@ -110,14 +112,14 @@ fun HomeScreen(navController: NavController) {
                     imageId = R.drawable.events_card,
                     title = "Events",
                     description = "Attend eco fashion expos",
-                    onClick = { navController.navigate("events") },
+                    onClick = { navController.navigate(ROUTE_EVENTS) },
                     delayMillis = 200
                 )
                 AnimatedFeatureCard(
                     imageId = R.drawable.ecotracker_card,
                     title = "EcoTracker",
                     description = "Track your sustainable impact",
-                    onClick = { navController.navigate("eco") },
+                    onClick = { navController.navigate(ROUTE_ECOTRACKER) },
                     delayMillis = 400
                 )
                 AnimatedFeatureCard(

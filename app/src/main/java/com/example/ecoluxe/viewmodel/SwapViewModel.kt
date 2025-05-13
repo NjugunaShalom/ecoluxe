@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ecoluxe.ui.screens.swap.SwapListScreen
 import com.example.ecoluxe.data.model.SwapItem
 import com.example.ecoluxe.data.network.uploadImageToImgur
@@ -59,7 +60,10 @@ class SwapViewModel : ViewModel() {
         onSuccess: () -> Unit
     ) {
         val userId = auth.currentUser?.uid ?: return
-        if (images.isEmpty()) return
+        if (images.isEmpty()) {
+            Toast.makeText(context, "Please select at least one image", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         viewModelScope.launch {
             val imageUrls = mutableListOf<String>()
@@ -72,7 +76,7 @@ class SwapViewModel : ViewModel() {
             }
 
             if (imageUrls.isEmpty()) {
-                Toast.makeText(context, "Failed to upload images", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Image upload failed", Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
@@ -87,18 +91,15 @@ class SwapViewModel : ViewModel() {
             )
 
             db.collection("swapItems").add(item)
-                .addOnSuccessListener { onSuccess() }
+                .addOnSuccessListener {
+                    Toast.makeText(context, "Swap item uploaded!", Toast.LENGTH_SHORT).show()
+                    loadItems() // 👈 Refresh UI
+                    onSuccess()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Failed to save item", Toast.LENGTH_SHORT).show()
+                }
         }
-    }
-
-
-    fun deleteItem(itemId: String) {
-        db.collection("swapItems").document(itemId).delete()
-    }
-
-    fun markAsSwapped(itemId: String) {
-        db.collection("swapItems").document(itemId)
-            .update("status", "Swapped")
     }
 
     fun editItem(
@@ -123,7 +124,7 @@ class SwapViewModel : ViewModel() {
             }
 
             if (imageUrls.isEmpty()) {
-                Toast.makeText(context, "Failed to upload images", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Image upload failed", Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
@@ -137,12 +138,57 @@ class SwapViewModel : ViewModel() {
 
             db.collection("swapItems").document(itemId)
                 .update(update)
-                .addOnSuccessListener { onSuccess() }
+                .addOnSuccessListener {
+                    Toast.makeText(context, "Swap item updated!", Toast.LENGTH_SHORT).show()
+                    loadItems() // 👈 Refresh
+                    onSuccess()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Failed to update item", Toast.LENGTH_SHORT).show()
+                }
         }
     }
+    fun deleteItem(itemId: String) {
+        db.collection("swapItems").document(itemId)
+            .delete()
+    }
+    fun markAsSwapped(itemId: String) {
+        db.collection("swapItems").document(itemId)
+            .update("status", "Swapped")
+    }
+
+
 
     fun isCurrentUser(uid: String): Boolean {
         return auth.currentUser?.uid == uid
     }
+
+    fun loadItemsFiltered(color: String, size: String) {
+        val userId = auth.currentUser?.uid ?: return
+        db.collection("swapItems")
+            .whereEqualTo("status", "Available")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                var items = snapshot.documents.mapNotNull { doc ->
+                    val data = doc.data ?: return@mapNotNull null
+                    SwapItem(
+                        id = doc.id,
+                        name = data["name"] as? String ?: "",
+                        size = data["size"] as? String ?: "",
+                        color = data["color"] as? String ?: "",
+                        imageUrl = data["imageUrl"] as? String ?: "",
+                        extraImages = data["extraImages"] as? List<String> ?: emptyList(),
+                        uploader = data["uploader"] as? String ?: "",
+                        status = data["status"] as? String ?: "Available"
+                    )
+                }
+
+                if (color != "All") items = items.filter { it.color.equals(color, ignoreCase = true) }
+                if (size != "All") items = items.filter { it.size.equals(size, ignoreCase = true) }
+
+                _swapItems.value = items
+            }
+    }
+
 
 }
