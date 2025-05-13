@@ -78,6 +78,7 @@ class ChatViewModel : ViewModel() {
         val user = auth.currentUser ?: return
         val userId = user.uid
 
+
         viewModelScope.launch {
             try {
                 // Get the current user's profile name
